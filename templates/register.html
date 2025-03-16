@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<video autoplay loop muted playsinline id="background-video">
+    <source src="{% static 'videos/weapons.webm' %}" type="video/webm">
+    Your browser does not support the video tag.
+</video>
+
+<div class="auth-container">
+    <h2>Register</h2>
+    <div id="popup" class="popup" style="display: none;">
+        <div class="popup-content">
+            <span class="close-btn">&times;</span>
+            <p id="popup-message"></p>
+        </div>
+    </div>
+    <form method="post" id="register-form">
+        {% csrf_token %}
+        <label for="username">Username:</label>
+        <input type="text" name="username" required>
+
+        <label for="email">Email:</label>
+        <input type="email" name="email" required>
+
+        <label for="password1">Password:</label>
+        <input type="password" name="password1" required>
+
+        <label for="password2">Confirm Password:</label>
+        <input type="password" name="password2" required>
+
+        <button type="submit">Register</button>
+    </form>
+    <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+</div>
+
+<style>
+.popup {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.popup-content {
+    position: relative;
+    background-color: #1a1a1a;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 5px;
+    color: white;
+}
+
+.close-btn {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-btn:hover {
+    color: white;
+}
+
+.error-message {
+    color: #ff4444;
+    margin-bottom: 10px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('register-form');
+    const popup = document.getElementById('popup');
+    const closeBtn = document.querySelector('.close-btn');
+    const popupMessage = document.getElementById('popup-message');
+
+    {% if messages %}
+        {% for message in messages %}
+            showPopup("{{ message }}");
+        {% endfor %}
+    {% endif %}
+
+    function showPopup(message) {
+        popupMessage.textContent = message;
+        popup.style.display = 'block';
+    }
+
+    closeBtn.onclick = function() {
+        popup.style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target == popup) {
+            popup.style.display = 'none';
+        }
+    }
+
+    form.onsubmit = function(e) {
+        const password1 = form.querySelector('input[name="password1"]').value;
+        const password2 = form.querySelector('input[name="password2"]').value;
+        const username = form.querySelector('input[name="username"]').value;
+        const email = form.querySelector('input[name="email"]').value;
+
+        if (password1 !== password2) {
+            e.preventDefault();
+            showPopup("Passwords do not match!");
+            return false;
+        }
+
+        if (password1.length < 8) {
+            e.preventDefault();
+            showPopup("Password must be at least 8 characters long!");
+            return false;
+        }
+
+        if (username.length < 1) {
+            e.preventDefault();
+            showPopup("Username is required!");
+            return false;
+        }
+
+        if (!email.includes('@')) {
+            e.preventDefault();
+            showPopup("Please enter a valid email address!");
+            return false;
+        }
+    }
+});
+</script>
+{% endblock %}

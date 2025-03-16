@@ -1,0 +1,353 @@
+{% load static %}
+{% block content %}
+{% csrf_token %}
+<!-- Background -->
+<div class="background"></div>
+
+<!-- Navigation -->
+<nav>
+    <ul>
+        <li><a href="{% url 'home' %}">Home</a></li>
+        <li><a href="{% url 'market' %}">Market</a></li>
+        {% if is_authenticated %}
+            <li><a href="{% url 'profile' %}">Account</a></li>
+            <li><a href="{% url 'logout' %}">Logout</a></li>
+        {% else %}
+            <li><a href="{% url 'login' %}">Login</a></li>
+            <li><a href="{% url 'register' %}">Register</a></li>
+        {% endif %}
+    </ul>
+</nav>
+
+<!-- Market header -->
+<div class="market-header">
+    <h1>CS2 Skin Market</h1>
+    <div class="search-bar">
+        <input type="text" id="search-input" placeholder="Search skins...">
+    </div>
+    {% if not is_authenticated %}
+    <div class="guest-notice">
+        <p>Please <a href="{% url 'login' %}">login</a> to purchase skins</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Grid container -->
+<div class="items-grid">
+    {% for skin in skins %}
+    <div class="item-card" data-name="{{ skin.name }}" data-id="{{ skin.id }}">
+        <div class="item-image">
+            {% if skin.image and skin.image.url %}
+                <img src="{{ skin.image.url }}" alt="{{ skin.name }}">
+            {% else %}
+                <img src="{% static 'images/default.jpg' %}" alt="{{ skin.name }}">
+            {% endif %}
+        </div>
+        <div class="item-info">
+            <h3>{{ skin.name }}</h3>
+            <p class="price">¥{{ skin.price }}</p>
+            {% if is_authenticated %}
+                {% if skin.is_owned %}
+                    <button class="owned-btn" disabled>Owned</button>
+                {% else %}
+                    <button class="buy-btn" data-id="{{ skin.id }}" data-name="{{ skin.name }}">Buy Now</button>
+                {% endif %}
+            {% else %}
+                <button class="login-required-btn" onclick="window.location.href='{% url 'login' %}'">Login to Buy</button>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+        <a href="?page=1" class="page-link">&laquo; First</a>
+        <a href="?page={{ page_obj.previous_page_number }}" class="page-link">Previous</a>
+    {% endif %}
+
+    <span class="current">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="page-link">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}" class="page-link">Last &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Add click event listeners to all buy buttons
+    document.querySelectorAll('.buy-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const skinId = this.getAttribute('data-id');
+            const skinName = this.getAttribute('data-name');
+            
+            // Send purchase request
+            fetch(`/market/buy_skin/${skinId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Successfully purchased ${skinName}! New balance: ¥${data.new_balance}`);
+                    window.location.reload();
+                } else {
+                    alert(data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing your purchase.');
+            });
+        });
+    });
+
+    // Search functionality
+    const searchInput = document.getElementById('search-input');
+    const items = document.querySelectorAll('.item-card');
+
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        
+        items.forEach(item => {
+            const name = item.getAttribute('data-name').toLowerCase();
+            if (name.includes(searchTerm)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("{% static 'images/Background 12.png' %}");
+    background-size: cover;
+    background-position: center;
+    z-index: -1;
+}
+
+nav {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    border-radius: 10px;
+}
+
+nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 20px;
+}
+
+nav ul li a {
+    text-decoration: none;
+    color: black;
+    font-weight: bold;
+}
+
+.market-header {
+    padding: 2rem;
+    text-align: center;
+    margin-top: 60px;
+}
+
+.market-header h1 {
+    color: #fff;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.search-bar {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 0.8rem;
+    border: none;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.8);
+    color: #000;
+}
+
+.items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.item-card {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+}
+
+.item-image {
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+}
+
+.item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.item-card:hover .item-image img {
+    transform: scale(1.05);
+}
+
+.item-info {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.item-info h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.price {
+    font-size: 1.5rem;
+    color: #00cc6a;
+    font-weight: bold;
+    margin: 0.5rem 0;
+}
+
+.owned-btn {
+    background-color: #666;
+    color: white;
+    cursor: not-allowed;
+}
+
+.buy-btn {
+    width: 100%;
+    padding: 0.8rem;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    background-color: #00ff88;
+}
+
+.buy-btn:hover {
+    background-color: #00cc6a;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin: 2rem 0;
+    padding: 1rem;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+}
+
+.pagination a {
+    text-decoration: none;
+    color: #000;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    background-color: #fff;
+    transition: background-color 0.3s;
+}
+
+.pagination a:hover {
+    background-color: #00ff88;
+}
+
+.pagination .current {
+    padding: 0.5rem 1rem;
+    font-weight: bold;
+}
+
+.guest-notice {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin: 10px 0;
+    text-align: center;
+}
+
+.guest-notice a {
+    color: #4CAF50;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.guest-notice a:hover {
+    text-decoration: underline;
+}
+
+.login-required-btn {
+    background-color: #666;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.login-required-btn:hover {
+    background-color: #4CAF50;
+}
+</style>
+{% endblock %}
