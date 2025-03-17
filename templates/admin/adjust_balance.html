@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Adjust Balance for {{ target_user.username }}</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="mb-4">
+                <h5>Current Balance: ${{ target_user.profile.wallet_balance }}</h5>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="amount">Amount (use negative for deduction)</label>
+                    <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="reason">Reason for Adjustment</label>
+                    <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Adjust Balance</button>
+                <a href="{% url 'user_management' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

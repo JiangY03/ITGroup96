@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Purchase{% endblock %}
+
+{% block content %}
+    <h2>Purchase Confirmation</h2>
+    <p>Are you sure you want to buy <strong>{{ skin.name }}</strong> for ${{ skin.price }}?</p>
+    <form method="POST">
+        {% csrf_token %}
+        <button type="submit">Confirm Purchase</button>
+    </form>
+{% endblock %}
