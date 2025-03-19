@@ -372,10 +372,10 @@ def import_skins(request):
         for row in reader:
             Skin.objects.create(
                 name=row['Name'],
-                category=row['Category'],
+                category=row.get('Category', 'rifle'),  # Default to rifle if not specified
                 price=row['Price'],
-                description=row['Description'],
-                is_active=row['Is Active'].lower() == 'true'
+                description=row.get('Description', ''),  # Default to empty string if not specified
+                is_active=row.get('Is Active', 'True').lower() == 'true'  # Default to True if not specified
             )
         
         messages.success(request, "Successfully imported skins")
