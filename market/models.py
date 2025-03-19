@@ -6,10 +6,20 @@ from django.conf import settings
 # from market.models import Skin  # No need to import Skin if it's in the current file
 
 class Skin(models.Model):
+    CATEGORY_CHOICES = [
+        ('rifle', 'Rifle'),
+        ('pistol', 'Pistol'),
+        ('knife', 'Knife'),
+        ('smg', 'SMG'),
+        ('heavy', 'Heavy'),
+    ]
+    
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(blank=True)
     image = models.ImageField(upload_to='skins/', null=True, blank=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='rifle')
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
