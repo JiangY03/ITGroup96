@@ -413,6 +413,13 @@ def import_skins(request):
                     description = row.get(header_mapping.get('description', ''), '')
                     is_active = row.get(header_mapping.get('is_active', ''), 'True').lower() == 'true'
                     
+                    # 处理图片路径
+                    image_path = row.get(header_mapping.get('image', ''), '')
+                    if image_path:
+                        # 移除 media/ 前缀（如果存在）
+                        if image_path.startswith('media/'):
+                            image_path = image_path[6:]
+                    
                     # 验证必需字段
                     if not name or not price:
                         error_count += 1
@@ -429,14 +436,20 @@ def import_skins(request):
                         continue
                     
                     # 创建或更新皮肤
+                    skin_data = {
+                        'category': category,
+                        'price': price,
+                        'description': description,
+                        'is_active': is_active
+                    }
+                    
+                    # 如果有图片路径，添加到数据中
+                    if image_path:
+                        skin_data['image'] = image_path
+                    
                     Skin.objects.update_or_create(
                         name=name,
-                        defaults={
-                            'category': category,
-                            'price': price,
-                            'description': description,
-                            'is_active': is_active
-                        }
+                        defaults=skin_data
                     )
                     success_count += 1
                     
