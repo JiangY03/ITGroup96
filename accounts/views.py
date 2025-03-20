@@ -236,7 +236,7 @@ def admin_dashboard(request):
 @user_passes_test(is_admin)
 def user_management(request):
     search_query = request.GET.get('search', '')
-    users = User.objects.filter(
+    users = User.objects.select_related('account_profile').filter(
         Q(username__icontains=search_query) |
         Q(email__icontains=search_query)
     ).order_by('-date_joined')
