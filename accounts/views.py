@@ -368,37 +368,37 @@ def import_skins(request):
     if request.method == 'POST' and request.FILES.get('csv_file'):
         csv_file = request.FILES['csv_file']
         
-        # 尝试不同的编码
+        # Try different encodings
         encodings = ['utf-8', 'utf-8-sig', 'gbk', 'gb2312', 'gb18030']
         decoded_file = None
         
         for encoding in encodings:
             try:
-                csv_file.seek(0)  # 重置文件指针
+                csv_file.seek(0)  # Reset file pointer
                 decoded_file = csv_file.read().decode(encoding)
                 break
             except UnicodeDecodeError:
                 continue
         
         if decoded_file is None:
-            messages.error(request, '无法解码CSV文件，请确保文件编码正确。')
+            messages.error(request, 'Unable to decode CSV file. Please ensure correct encoding.')
             return redirect('skin_management')
         
         try:
             reader = csv.DictReader(io.StringIO(decoded_file))
             
-            # 获取CSV文件的列名
+            # Get CSV file column names
             headers = reader.fieldnames or []
             
-            # 创建列名映射（不区分大小写）
+            # Create column name mapping (case insensitive)
             header_mapping = {h.lower(): h for h in headers}
             
-            # 验证必需字段
+            # Validate required fields
             required_fields = {'name', 'price'}
             missing_fields = required_fields - set(header_mapping.keys())
             
             if missing_fields:
-                messages.error(request, f'CSV文件缺少必需的列: {", ".join(missing_fields)}')
+                messages.error(request, f'CSV file missing required columns: {", ".join(missing_fields)}')
                 return redirect('skin_management')
             
             success_count = 0
@@ -406,26 +406,26 @@ def import_skins(request):
             
             for row in reader:
                 try:
-                    # 使用映射获取正确的列名
+                    # Use mapping to get correct column names
                     name = row[header_mapping['name']]
                     price = row[header_mapping['price']]
                     category = row.get(header_mapping.get('category', ''), 'rifle')
                     description = row.get(header_mapping.get('description', ''), '')
                     is_active = row.get(header_mapping.get('is_active', ''), 'True').lower() == 'true'
                     
-                    # 处理图片路径
+                    # Handle image path
                     image_path = row.get(header_mapping.get('image', ''), '')
                     if image_path:
-                        # 移除 media/ 前缀（如果存在）
+                        # Remove media/ prefix (if exists)
                         if image_path.startswith('media/'):
                             image_path = image_path[6:]
                     
-                    # 验证必需字段
+                    # Validate required fields
                     if not name or not price:
                         error_count += 1
                         continue
                     
-                    # 验证价格格式
+                    # Validate price format
                     try:
                         price = float(price)
                         if price < 0:
@@ -435,7 +435,7 @@ def import_skins(request):
                         error_count += 1
                         continue
                     
-                    # 创建或更新皮肤
+                    # Create or update skin
                     skin_data = {
                         'category': category,
                         'price': price,
@@ -443,7 +443,7 @@ def import_skins(request):
                         'is_active': is_active
                     }
                     
-                    # 如果有图片路径，添加到数据中
+                    # Add image path to data if exists
                     if image_path:
                         skin_data['image'] = image_path
                     
@@ -458,14 +458,14 @@ def import_skins(request):
                     continue
             
             if success_count > 0:
-                messages.success(request, f'成功导入 {success_count} 个皮肤。')
+                messages.success(request, f'Successfully imported {success_count} skins.')
             if error_count > 0:
-                messages.warning(request, f'{error_count} 行因错误而被跳过。')
+                messages.warning(request, f'{error_count} rows were skipped due to errors.')
             
             return redirect('skin_management')
             
         except Exception as e:
-            messages.error(request, f'导入CSV文件时出错: {str(e)}')
+            messages.error(request, f'Error importing CSV file: {str(e)}')
             return redirect('skin_management')
     
     return render(request, 'admin/import_skins.html')
