@@ -150,7 +150,7 @@ def recharge_wallet(request):
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
     try:
-        # Parse request body
+        # Parse request body 
         data = json.loads(request.body)
         amount = Decimal(data.get("amount", 0))  # Convert to Decimal type
         card_number = data.get("card_number")
