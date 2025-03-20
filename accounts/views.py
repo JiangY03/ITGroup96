@@ -21,6 +21,7 @@ import csv
 from django.http import HttpResponse
 from datetime import datetime, time
 from django.db.models import Sum
+import io
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +151,7 @@ def recharge_wallet(request):
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
     try:
-        # Parse request body 
+        # Parse request body
         data = json.loads(request.body)
         amount = Decimal(data.get("amount", 0))  # Convert to Decimal type
         card_number = data.get("card_number")
@@ -366,27 +367,93 @@ def export_skins(request):
 def import_skins(request):
     if request.method == 'POST' and request.FILES.get('csv_file'):
         csv_file = request.FILES['csv_file']
-        decoded_file = csv_file.read().decode('utf-8').splitlines()
-        reader = csv.DictReader(decoded_file)
         
-        for row in reader:
-            # 将所有键转换为小写
-            row = {k.lower(): v for k, v in row.items()}
-            
+        # 尝试不同的编码
+        encodings = ['utf-8', 'utf-8-sig', 'gbk', 'gb2312', 'gb18030']
+        decoded_file = None
+        
+        for encoding in encodings:
             try:
-                Skin.objects.create(
-                    name=row['name'],  # 使用小写的键
-                    category=row.get('category', 'rifle'),  # 使用小写的键
-                    price=row['price'],  # 使用小写的键
-                    description=row.get('description', ''),  # 使用小写的键
-                    is_active=row.get('is_active', 'True').lower() == 'true'  # 使用小写的键
-                )
-            except Exception as e:
-                messages.error(request, f"Error importing skin: {str(e)}")
-                return redirect('skin_management')
+                csv_file.seek(0)  # 重置文件指针
+                decoded_file = csv_file.read().decode(encoding)
+                break
+            except UnicodeDecodeError:
+                continue
         
-        messages.success(request, "Successfully imported skins")
-        return redirect('skin_management')
+        if decoded_file is None:
+            messages.error(request, '无法解码CSV文件，请确保文件编码正确。')
+            return redirect('skin_management')
+        
+        try:
+            reader = csv.DictReader(io.StringIO(decoded_file))
+            
+            # 获取CSV文件的列名
+            headers = reader.fieldnames or []
+            
+            # 创建列名映射（不区分大小写）
+            header_mapping = {h.lower(): h for h in headers}
+            
+            # 验证必需字段
+            required_fields = {'name', 'price'}
+            missing_fields = required_fields - set(header_mapping.keys())
+            
+            if missing_fields:
+                messages.error(request, f'CSV文件缺少必需的列: {", ".join(missing_fields)}')
+                return redirect('skin_management')
+            
+            success_count = 0
+            error_count = 0
+            
+            for row in reader:
+                try:
+                    # 使用映射获取正确的列名
+                    name = row[header_mapping['name']]
+                    price = row[header_mapping['price']]
+                    category = row.get(header_mapping.get('category', ''), 'rifle')
+                    description = row.get(header_mapping.get('description', ''), '')
+                    is_active = row.get(header_mapping.get('is_active', ''), 'True').lower() == 'true'
+                    
+                    # 验证必需字段
+                    if not name or not price:
+                        error_count += 1
+                        continue
+                    
+                    # 验证价格格式
+                    try:
+                        price = float(price)
+                        if price < 0:
+                            error_count += 1
+                            continue
+                    except ValueError:
+                        error_count += 1
+                        continue
+                    
+                    # 创建或更新皮肤
+                    Skin.objects.update_or_create(
+                        name=name,
+                        defaults={
+                            'category': category,
+                            'price': price,
+                            'description': description,
+                            'is_active': is_active
+                        }
+                    )
+                    success_count += 1
+                    
+                except Exception as e:
+                    error_count += 1
+                    continue
+            
+            if success_count > 0:
+                messages.success(request, f'成功导入 {success_count} 个皮肤。')
+            if error_count > 0:
+                messages.warning(request, f'{error_count} 行因错误而被跳过。')
+            
+            return redirect('skin_management')
+            
+        except Exception as e:
+            messages.error(request, f'导入CSV文件时出错: {str(e)}')
+            return redirect('skin_management')
     
     return render(request, 'admin/import_skins.html')
 
