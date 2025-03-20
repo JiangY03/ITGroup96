@@ -370,13 +370,20 @@ def import_skins(request):
         reader = csv.DictReader(decoded_file)
         
         for row in reader:
-            Skin.objects.create(
-                name=row['Name'],
-                category=row.get('Category', 'rifle'),  # Default to rifle if not specified
-                price=row['Price'],
-                description=row.get('Description', ''),  # Default to empty string if not specified
-                is_active=row.get('Is Active', 'True').lower() == 'true'  # Default to True if not specified
-            )
+            # 将所有键转换为小写
+            row = {k.lower(): v for k, v in row.items()}
+            
+            try:
+                Skin.objects.create(
+                    name=row['name'],  # 使用小写的键
+                    category=row.get('category', 'rifle'),  # 使用小写的键
+                    price=row['price'],  # 使用小写的键
+                    description=row.get('description', ''),  # 使用小写的键
+                    is_active=row.get('is_active', 'True').lower() == 'true'  # 使用小写的键
+                )
+            except Exception as e:
+                messages.error(request, f"Error importing skin: {str(e)}")
+                return redirect('skin_management')
         
         messages.success(request, "Successfully imported skins")
         return redirect('skin_management')
