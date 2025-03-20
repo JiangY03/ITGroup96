@@ -1,11 +1,2 @@
-name,price,description,category,is_active
-AK-47 Asiimov,299.99,A futuristic design with orange and white color scheme,rifle,true
-M4A4 Howl,999.99,Legendary dragon-themed skin with special effects,rifle,true
-AWP Dragon Lore,1499.99,Classic dragon design with gold accents,rifle,true
-USP-S Neo-Noir,49.99,Modern black and white design with neon accents,pistol,true
-M9 Bayonet Fade,799.99,Colorful gradient effect on the blade,knife,true
-P90 Asiimov,79.99,Futuristic design matching the AK-47 Asiimov,smg,true
-MAG-7 Heat,29.99,Red hot design with flame effects,heavy,true
-Desert Eagle Blaze,199.99,Fiery design with orange and yellow flames,pistol,true
-Karambit Fade,1299.99,Popular knife with colorful gradient effect,knife,true
-AUG Akihabara Accept,159.99,Anime-themed design with Japanese elements,rifle,true 
+name,price,description,category,is_active,image
+AK-47 | Asiimov,111299.99,A futuristic design with orange and white color scheme,rifle,true,media/skins/1.jpg 
