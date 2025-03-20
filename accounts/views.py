@@ -252,36 +252,59 @@ def user_management(request):
 
 @user_passes_test(is_admin)
 def adjust_balance(request, user_id):
+    target_user = get_object_or_404(User, id=user_id)
+    
     if request.method == 'POST':
-        target_user = get_object_or_404(User, id=user_id)
-        amount = Decimal(request.POST.get('amount', 0))
-        reason = request.POST.get('reason', '')
-        
-        profile = target_user.profile
-        profile.wallet_balance += amount
-        profile.save()
-        
-        # Record transaction
-        Transaction.objects.create(
-            user=target_user,
-            description=f"Balance adjusted by admin: {reason}",
-            amount=amount,
-            date=timezone.now()
-        )
-        
-        # Record admin operation
-        AdminLog.objects.create(
-            admin_user=request.user,
-            action="balance_adjustment",
-            target_user=target_user,
-            details=f"Adjusted balance by {amount}. Reason: {reason}"
-        )
-        
-        messages.success(request, f"Successfully adjusted balance for {target_user.username}")
-        return redirect('user_management')
+        try:
+            amount = Decimal(request.POST.get('amount', '0'))
+            reason = request.POST.get('reason', '').strip()
+            
+            if not reason:
+                messages.error(request, "Please provide a reason for the adjustment")
+                return redirect('adjust_balance', user_id=user_id)
+            
+            # Get user profile and update balance
+            with transaction.atomic():
+                profile = target_user.account_profile
+                new_balance = profile.wallet_balance + amount
+                
+                if new_balance < 0:
+                    messages.error(request, "Balance cannot be negative")
+                    return redirect('adjust_balance', user_id=user_id)
+                
+                profile.wallet_balance = new_balance
+                profile.save()
+                
+                # Record transaction
+                Transaction.objects.create(
+                    user=target_user,
+                    description=f"Balance adjusted by admin: {reason}",
+                    amount=amount,
+                    date=timezone.now()
+                )
+                
+                # Record admin operation
+                AdminLog.objects.create(
+                    admin_user=request.user,
+                    action="balance_adjustment",
+                    target_user=target_user,
+                    details=f"Adjusted balance by {amount}. Reason: {reason}"
+                )
+            
+            messages.success(request, f"Successfully adjusted balance for {target_user.username}")
+            return redirect('user_management')
+            
+        except (ValueError, InvalidOperation) as e:
+            messages.error(request, "Please enter a valid amount")
+            return redirect('adjust_balance', user_id=user_id)
+        except Exception as e:
+            messages.error(request, "An error occurred while adjusting the balance")
+            logger.error(f"Error adjusting balance: {str(e)}")
+            return redirect('adjust_balance', user_id=user_id)
     
     return render(request, 'admin/adjust_balance.html', {
-        'target_user': get_object_or_404(User, id=user_id)
+        'target_user': target_user,
+        'current_balance': target_user.account_profile.wallet_balance
     })
 
 @user_passes_test(is_admin)
